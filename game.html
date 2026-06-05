@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Bola Hitam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        utama: '#165DFF',
+                        gelap: '#1D2129',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bola {
+                @apply rounded-full bg-gelap cursor-pointer transition-all duration-200 ease-out select-none shadow-lg;
+            }
+            .gelembung {
+                @apply absolute px-8 py-4 bg-white/95 text-utama font-bold rounded-full shadow-2xl text-xl animate-bounce z-20;
+            }
+            .efek-sinar {
+                @apply absolute inset-0 rounded-full bg-white/30 blur-md opacity-0 transition-opacity duration-200;
+            }
+            .bola-ditekan .efek-sinar {
+                @apply opacity-100;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen overflow-hidden font-sans">
+    <div class="container mx-auto px-4 py-6 relative h-screen">
+        <!-- Judul Game -->
+        <div class="text-center mb-8">
+            <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-gelap mb-2 drop-shadow-md">Game Bola Hitam</h1>
+            <p class="text-gray-600">Tekan bola untuk membesarkan, lepas untuk mengecil. Ukuran bertambah dari 1 sampai 100!</p>
+            <div class="mt-4 text-xl font-semibold text-utama">Ukuran Bola: <span id="ukuranBola">1</span> / 100</div>
+        </div>
+
+        <!-- Area Bola -->
+        <div id="areaBola" class="relative w-full h-[75vh] rounded-2xl bg-white/40 backdrop-blur-sm shadow-inner border border-white/50 flex items-center justify-center">
+            <!-- Gelembung Berhasil -->
+            <div id="gelembungBerhasil" class="gelembung hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                🎉 BERHASIL! 🎉
+            </div>
+        </div>
+    </div>
+
+    <!-- File Suara -->
+    <audio id="suaraTekan" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-quick-win-video-game-notification-269.mp3" type="audio/mpeg">
+    
+    <audio id="suaraLepas" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" type="audio/mpeg">
+    
+    <audio id="suaraSelesai" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3" type="audio/mpeg">
+    
+
+    <script>
+        const areaBola = document.getElementById('areaBola');
+        const ukuranBolaEl = document.getElementById('ukuranBola');
+        const gelembungBerhasil = document.getElementById('gelembungBerhasil');
+        
+        const suaraTekan = document.getElementById('suaraTekan');
+        const suaraLepas = document.getElementById('suaraLepas');
+        const suaraSelesai = document.getElementById('suaraSelesai');
+        
+        let angkaSekarang = 1;
+        let ukuranMaksimal = 100;
+        let ukuranBolaAwal = 10; // ukuran saat angka = 1
+        let ukuranBolaSekarang = ukuranBolaAwal;
+        let intervalMengecil;
+
+        // Buat 1 bola saja
+        const bola = document.createElement('div');
+        bola.classList.add('bola');
+        
+        // Efek cahaya di dalam bola
+        const efekSinar = document.createElement('div');
+        efekSinar.classList.add('efek-sinar');
+        bola.appendChild(efekSinar);
+
+        // Atur posisi bola di tengah area
+        bola.style.position = 'absolute';
+        bola.style.left = '50%';
+        bola.style.top = '50%';
+        bola.style.transform = 'translate(-50%, -50%)';
+        bola.style.width = `${ukuranBolaSekarang}px`;
+        bola.style.height = `${ukuranBolaSekarang}px`;
+
+        areaBola.appendChild(bola);
+
+
+        // Saat ditekan: membesar + angka bertambah + efek suara
+        bola.addEventListener('mousedown', () => {
+            if (angkaSekarang >= ukuranMaksimal) return;
+            
+            clearInterval(intervalMengecil);
+            bola.classList.add('bola-ditekan');
+            suaraTekan.currentTime = 0;
+            suaraTekan.play().catch(() => {});
+
+            // Tambah angka dan ubah ukuran bola
+            angkaSekarang++;
+            ukuranBolaSekarang = ukuranBolaAwal + (angkaSekarang - 1) * 1.5;
+            
+            // Terapkan ukuran baru
+            bola.style.width = `${ukuranBolaSekarang}px`;
+            bola.style.height = `${ukuranBolaSekarang}px`;
+            ukuranBolaEl.textContent = angkaSekarang;
+
+            // Cek jika sudah mencapai 100
+            if (angkaSekarang === ukuranMaksimal) {
+                selesaiGame();
+            }
+        });
+
+
+        // Saat dilepas: mengecil perlahan
+        bola.addEventListener('mouseup', () => {
+            bola.classList.remove('bola-ditekan');
+            suaraLepas.currentTime = 0;
+            suaraLepas.play().catch(() => {});
+
+            intervalMengecil = setInterval(() => {
+                if (ukuranBolaSekarang > ukuranBolaAwal) {
+                    ukuranBolaSekarang -= 1;
+                    bola.style.width = `${ukuranBolaSekarang}px`;
+                    bola.style.height = `${ukuranBolaSekarang}px`;
+                } else {
+                    clearInterval(intervalMengecil);
+                }
+            }, 30);
+        });
+
+
+        // Untuk layar sentuh (HP)
+        bola.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (angkaSekarang >= ukuranMaksimal) return;
+            
+            clearInterval(intervalMengecil);
+            bola.classList.add('bola-ditekan');
+            suaraTekan.currentTime = 0;
+            suaraTekan.play().catch(() => {});
+
+            angkaSekarang++;
+            ukuranBolaSekarang = ukuranBolaAwal + (angkaSekarang - 1) * 1.5;
+            
+            bola.style.width = `${ukuranBolaSekarang}px`;
+            bola.style.height = `${ukuranBolaSekarang}px`;
+            ukuranBolaEl.textContent = angkaSekarang;
+
+            if (angkaSekarang === ukuranMaksimal) {
+                selesaiGame();
+            }
+        });
+
+        bola.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            bola.classList.remove('bola-ditekan');
+            suaraLepas.currentTime = 0;
+            suaraLepas.play().catch(() => {});
+
+            intervalMengecil = setInterval(() => {
+                if (ukuranBolaSekarang > ukuranBolaAwal) {
+                    ukuranBolaSekarang -= 1;
+                    bola.style.width = `${ukuranBolaSekarang}px`;
+                    bola.style.height = `${ukuranBolaSekarang}px`;
+                } else {
+                    clearInterval(intervalMengecil);
+                }
+            }, 30);
+        });
+
+
+        // Fungsi saat sudah mencapai ukuran 100
+        function selesaiGame() {
+            gelembungBerhasil.classList.remove('hidden');
+            gelembungBerhasil.classList.add('animate-pulse');
+            suaraSelesai.currentTime = 0;
+            suaraSelesai.play().catch(() => {});
+
+            // Efek semburan warna
+            const warna = ['#ff3366', '#33ccff', '#33ff66', '#ffcc33', '#cc33ff'];
+            for(let i = 0; i < 50; i++) {
+                const butiran = document.createElement('div');
+                butiran.style.position = 'absolute';
+                butiran.style.width = Math.random() * 20 + 10 + 'px';
+                butiran.style.height = butiran.style.width;
+                butiran.style.borderRadius = '50%';
+                butiran.style.backgroundColor = warna[Math.floor(Math.random() * warna.length)];
+                butiran.style.left = '50%';
+                butiran.style.top = '50%';
+                butiran.style.transform = 'translate(-50%, -50%)';
+                butiran.style.pointerEvents = 'none';
+                butiran.style.zIndex = '15';
+                butiran.style.opacity = '0.8';
+                areaBola.appendChild(butiran);
+
+                const sudut = Math.random() * Math.PI * 2;
+                const kecepatan = Math.random() * 8 + 3;
+                let x = 0, y = 0;
+
+                const animasi = setInterval(() => {
+                    x += Math.cos(sudut) * kecepatan;
+                    y += Math.sin(sudut) * kecepatan + 0.3;
+                    butiran.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+                    butiran.style.opacity = parseFloat(butiran.style.opacity) - 0.02;
+
+                    if(butiran.style.opacity <= 0) {
+                        clearInterval(animasi);
+                        butiran.remove();
+                    }
+                }, 20);
+            }
+        }
+    </script>
+</body>
+</html>
